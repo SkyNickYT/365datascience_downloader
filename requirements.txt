@@ -4,6 +4,7 @@ json
 pickle
 argparse
 requests
-beautifulsoup4
 selenium
 colorama
+python-dotenv
+beautifulsoup4
