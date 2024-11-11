@@ -1,8 +1,4 @@
-html
 lxml
-json
-pickle
-argparse
 requests
 selenium
 colorama
