@@ -1,8 +1,9 @@
 html
+lxml
 json
 pickle
 argparse
 requests
-bs4
+beautifulsoup4
 selenium
 colorama
