@@ -1,5 +1,5 @@
 # Any Current Offers Show Here:
-#### Will remove when no offers
+#### Will remove when no offers, Current offer: Nov. 1 2024 to Nov. 21 2024
 <img src="https://i.imgur.com/IShuD9o.png" alt="Imgur Image" width="500"/>
 
 # 365 Data Science + Financial Analyst Downloader
