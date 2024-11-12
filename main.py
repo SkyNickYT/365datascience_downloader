@@ -6,6 +6,7 @@ import html
 import json
 import pickle
 import argparse
+import html5lib
 import requests
 import subprocess
 from threading import Timer
@@ -42,9 +43,7 @@ def download_vtt(vtt_url, save_path):
 		try:
 			# Execute the FFmpeg command
 			subprocess.run(ffmpeg_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
 			print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f" VTT downloaded,\n\tand saved to {save_path}")
-
 		except subprocess.CalledProcessError as e:
 			# Handle errors during FFmpeg execution
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error occurred during FFmpeg execution: {e}")
@@ -64,7 +63,6 @@ def convert_vtt_to_srt(vtt_file, srt_file):
 			]
 			# Execute the command
 			subprocess.run(command, check=True)
-
 			print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f"Captions Download successful!\n\t Saved as SRT: {srt_file}")
 			os.remove(vtt_file)
 		except subprocess.CalledProcessError as e:
@@ -159,16 +157,12 @@ def duration_probe(file_path):
         stderr=subprocess.STDOUT)
 		# Output the result (duration in HH:MM:SS.xx format)
 		duration = float(result.stdout)
-		#print(Fore.MAGENTA + "\n[DEBUG] " + Fore.RESET + f"case1: {str(result.stdout.strip())}")
-		#duration = f"{duration:.6g}"
 		duration = str(duration)
 		duration = duration.replace('.', '')
 		duration = duration[0:6]
 		duration = duration.ljust(6, '0')
 		duration = int(duration)+1
 		duration = str(duration)
-		#duration = duration.ljust(6, '0')
-		#print(Fore.MAGENTA + "\n[DEBUG] " + Fore.RESET + f"Existing video duration: {duration}")
 		return duration
 
 	except Exception as e:
@@ -188,13 +182,16 @@ def is_duration_correct(existing_duration: str, expected_duration: str) -> bool:
 	else:
 		return False
 def download_lecture_part(output_folder, lec_link, lec_title, expected_duration):
-
 	if lec_link != None:
 		if "vtt" in lec_link:
 			output_path_vtt = os.path.join(output_folder, f"{lec_title}.vtt")
 			output_path_srt = os.path.join(output_folder, f"{lec_title}.srt")
 			if(os.path.exists(output_path_srt)):
 				print(Fore.MAGENTA + "\n[SKIPPING] " + Fore.RESET + "Skipping Captions Download, they already exist for this lecture.")
+				try:
+					os.remove(output_path_vtt)
+				except FileNotFoundError:
+					pass
 			else:
 				print(Fore.YELLOW + "\n[FFMPEG] " + Fore.RESET + " Trying to Download Captions\n\t...")
 				download_vtt(lec_link, output_path_vtt)
@@ -235,7 +232,7 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 								break
 						print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f"Lecture Download completed successfully!" + Fore.MAGENTA + "\n\n[INFO] " + Fore.RESET +  f"Saved to {output_path} after fixing duration from {existing_duration} to {expected_duration}")
 					except subprocess.CalledProcessError as e:
-						print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during conversion: {e}")
+						print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during conversion, corrupted file maybe: {e}")
 			else:
 				# Execute the FFmpeg command and wait for it to finish
 				try:
@@ -279,6 +276,7 @@ def check_course_url(course_url):
 #MAIN
 def main():
 	global COURSE_URL
+	global COURSE_SLUG
 	global base_url
 	global base_api_url
 	global title_ignorer
@@ -293,12 +291,15 @@ def main():
 	base_url = None
 	try:
 		base_url, base_api_url = check_course_url(args.course)
+		course_slug_match = re.search(r"courses\/([^\/]+)\/", COURSE_URL)
 		if "365data" in base_url:
 			title_ignorer = " | 365 Data Science"
 			cookie_file_name = "cookies_ds.pkl"
+			COURSE_SLUG = course_slug_match.group(1)
 		elif "365financial" in base_url:
 			title_ignorer = " | 365 Financial Analyst"
 			cookie_file_name = "cookies_fa.pkl"
+			COURSE_SLUG = course_slug_match.group(1)
 		else:
 			print(f"{Fore.RED} \n[ERROR] {Fore.RESET}Uhhh not sure what happened here, please open an issue report on GitHub.")
 			time.sleep(2)
@@ -351,7 +352,7 @@ if(base_url != None and POLICY_KEY != None):
 	    'Accept': f'application/json;pk={POLICY_KEY}',
 	    'Accept-Language': 'en-US,en;q=0.9',
 	    'Accept-Encoding': 'gzip, deflate, br, zstd',
-	    'Origin': f'{base_url[0:-1]}',
+	    'Origin': f'{base_url[:-1]}',
 	    'Priority': 'u=1, i',
 	    'Referer': f'{base_url}',
 	    'Sec-CH-UA': '"Chromium";v="130", "Google Chrome";v="130", "Not_A_Brand";v="99"',
@@ -437,25 +438,45 @@ else:
 		print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f"{section.text}")
 		indice = 1
 		index += 1
-time.sleep(10)
+time.sleep(5)
+time.sleep(5)
 # wet, hot and ready...
-soup = html.unescape(str(BeautifulSoup(driver.page_source, 'lxml')))
+soup = html.unescape((BeautifulSoup(driver.page_source, 'html.parser')))
 # getting accountId
 acc_pattern = r"\/(\d{13})\/[a-f0-9\-]{36}\/main\/"
-account_id = re.search(acc_pattern, soup).group(1)
+account_id = re.search(acc_pattern, str(soup)).group(1)
 print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f'Your Account\'s ID: {account_id}')
 lesson_pattern = r'lesson">\s*(.*?)\s*<\/span>'
 # Find all lessons
-lessons = re.findall(lesson_pattern, soup)
+lessons = re.findall(lesson_pattern, str(soup))
 print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f' Found {len(lessons)} video lectures in this Course.\n\tWill try to download these, please report any issues on GitHub.')
 for lesson_name in lessons:
-	lesson_url_pattern = rf'href="([^"]+)"\s+title="{re.escape(lesson_name)}"'
-	lesson_url =  base_url[0:-1] + re.search(lesson_url_pattern, soup).group(1)
+	lesson_name_escaped = re.escape(lesson_name).replace('"', '&quot;')
+	lesson_url_pattern = fr'href="([^"]+)"(?=[^>]*title="{lesson_name_escaped}")'
+	try:
+		lesson_url_match = re.search(lesson_url_pattern, str(soup))[0]
+	except IndexError:
+		lesson_url_match = None
+	except TypeError:
+		lesson_url_match = None
+	if lesson_url_match is not None:
+		lesson_url =  base_url[:-1] + lesson_url_match
+		start_pt = lesson_url.find("/courses/")
+		end_pt = lesson_url.find('" ', start_pt)
+		lesson_url = lesson_url[start_pt:end_pt]
+		lesson_url = base_url[:-1] + lesson_url
+	else:
+		les_name = lesson_name.replace('"', '')
+		les_name = les_name.replace("'", '')
+		lesson_name_extrap = les_name.replace(" ", '-')
+		lesson_url = f"{base_url[:-1]}/courses/{COURSE_SLUG}/{lesson_name_extrap.lower()}/"
 	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f" Lecture {indice} of {len(lessons)}: {lesson_name}\n\thas URL {lesson_url}")
 	current_url = driver.current_url
 	if(lesson_url != current_url): #Next ones
 		driver.get(lesson_url)
-		time.sleep(12)
+		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+		time.sleep(6)
+		time.sleep(6)
 		# Wait for thex  page to load completely (you can customize this condition)
 		WebDriverWait(driver, 10).until(
 		    EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Wait for the body element to be present
@@ -463,20 +484,19 @@ for lesson_name in lessons:
 		# wet, hot and ready... (second timer)
 		soup = html.unescape(str(BeautifulSoup(driver.page_source, 'lxml')))
 		lecture_id, course_id, lecture_url, caption_url, expected_duration = extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL)
-		#sim_download()
 		lesson_name = sanitize(lesson_name)
 		lesson_name = str(indice)+" - "+lesson_name
 		download_lecture_part(COURSE_PATH, lecture_url, lesson_name, expected_duration)
 		download_lecture_part(COURSE_PATH, caption_url, lesson_name, expected_duration)
 	else: #First one
-		time.sleep(12)
-		# Wait for thex  page to load completely (you can customize this condition)
+		time.sleep(6)
+		time.sleep(6)
 		WebDriverWait(driver, 10).until(
 		    EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Wait for the body element to be present
 		)
-		soup = html.unescape(str(BeautifulSoup(driver.page_source, 'lxml')))
+		soup = html.unescape(str(BeautifulSoup(driver.page_source, 'html.parser')))
 		lecture_id, course_id, lecture_url, caption_url, expected_duration = extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL)
-		# writing out for if we ever want to debug this mess
+		# writing out for if we ever want to debug this mess, plus exercises
 		os.makedirs(COURSE_PATH, exist_ok=True)
 		with open(f'{COURSE_PATH}soup.html', 'w', encoding='utf-8') as out:
 			out.write(f"{soup}")
