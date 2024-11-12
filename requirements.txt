@@ -1,4 +1,5 @@
 lxml
+html5lib
 requests
 selenium
 colorama
