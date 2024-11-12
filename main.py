@@ -95,7 +95,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Course's ID: {course_id}")
 	else:
 		course_id = None
-		print(Fore.RED + "\n[ERROR] " + Fore.RESET + "Video ID not found.")
+		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Video ID not found, unsupported lecture.")
 
 	# Extracting the lecture ID
 	lecid_pattern = r"\/([a-f0-9\-]{36})\/main\/"
@@ -105,7 +105,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Lecture's ID: {lecture_id}")
 	else:
 		lecture_id = None
-		print(Fore.RED + "\n[ERROR] " + Fore.RESET + "Lecture ID not found.")
+		print(Fore.RED + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture.")
 	# Check if we have a valid video ID to proceed
 	if course_id:
 		# Construct the URL to get the video information from Brightcove
@@ -134,11 +134,11 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 				lec = data[start_pt:end_pt].split("'")[1::2]
 				caption_url = lec[0]
 			else:
-				print(Fore.RED + "\n[ERROR] " + Fore.RESET + "Caption URL not found.")
+				print(Fore.RED + "\n[WARNING] " + Fore.RESET + "Captions URL not found for this lecture.")
 		else:
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Failed to get data: {response.status_code}")
 	else:
-		print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Video ID is required to fetch the lecture URL.")
+		print(Fore.RED + "\n[WARNING] " + Fore.RESET + f"Video ID is required to fetch a URL, not found on an unsupported lecture.")
 	# Return both IDs and the lecture URL (if found)
 	return lecture_id, course_id, lecture_url if 'lecture_url' in locals() else None, caption_url if 'caption_url' in locals() else None, requested_duration if 'requested_duration' in locals() else None
 def duration_probe(file_path):
@@ -450,11 +450,11 @@ print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f'Your Account\'s ID: {account_id}'
 lesson_pattern = r'lesson">\s*(.*?)\s*<\/span>'
 # Find all lessons
 lessons = re.findall(lesson_pattern, str(soup))
-print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f' Found {len(lessons)} lectures in this Course.\n\tWill try to download video & captions, please report any issues on GitHub.')
 total_lec_element = driver.find_element(By.XPATH, """//*[@id="__layout"]/div/header/nav/ul/li[1]/div[1]/div/div/div""").text
 total_lec_pattern = r'/(?P<number>\d+)'
 total_lecture = re.search(total_lec_pattern, total_lec_element)
 lesson_index = int(total_lecture.group('number'))
+print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f' Found {lesson_index} lectures in this Course.\n\tWill try to download videos & captions from these, please report any issues on GitHub.')
 while indice-1 <= lesson_index-1:
 	lesson_name = lessons[indice-1]
 	lesson_name_escaped = re.escape(lesson_name).replace('"', '&quot;')
