@@ -146,7 +146,7 @@ def duration_probe(file_path):
 		# Build the ffprobe command
 		command = [
 			'ffprobe',
-			'-i', file_path,
+			'-i', file_path.replace(':',''),
 			'-show_entries', 'format=duration',
 			'-v', 'quiet',
 			'-of', 'csv=p=0'
@@ -416,6 +416,7 @@ time.sleep(5)
 course_title = driver.title
 end_pt = course_title.find(title_ignorer, 0)
 course_title = course_title[0:end_pt]
+course_title = sanitize(course_title)
 COURSE_PATH = OUTPUT_FOLDER+course_title+"/"
 print(Fore.CYAN + "\n[INFO] " + Fore.RESET + "Course Page Title: ",driver.title)
 sections = driver.find_elements(By.CSS_SELECTOR, "span[class='section-name']")
@@ -449,8 +450,13 @@ print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f'Your Account\'s ID: {account_id}'
 lesson_pattern = r'lesson">\s*(.*?)\s*<\/span>'
 # Find all lessons
 lessons = re.findall(lesson_pattern, str(soup))
-print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f' Found {len(lessons)} video lectures in this Course.\n\tWill try to download these, please report any issues on GitHub.')
-for lesson_name in lessons:
+print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f' Found {len(lessons)} lectures in this Course.\n\tWill try to download video & captions, please report any issues on GitHub.')
+total_lec_element = driver.find_element(By.XPATH, """//*[@id="__layout"]/div/header/nav/ul/li[1]/div[1]/div/div/div""").text
+total_lec_pattern = r'/(?P<number>\d+)'
+total_lecture = re.search(total_lec_pattern, total_lec_element)
+lesson_index = int(total_lecture.group('number'))
+while indice-1 <= lesson_index-1:
+	lesson_name = lessons[indice-1]
 	lesson_name_escaped = re.escape(lesson_name).replace('"', '&quot;')
 	lesson_url_pattern = fr'href="([^"]+)"(?=[^>]*title="{lesson_name_escaped}")'
 	try:
@@ -470,7 +476,7 @@ for lesson_name in lessons:
 		les_name = les_name.replace("'", '')
 		lesson_name_extrap = les_name.replace(" ", '-')
 		lesson_url = f"{base_url[:-1]}/courses/{COURSE_SLUG}/{lesson_name_extrap.lower()}/"
-	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f" Lecture {indice} of {len(lessons)}: {lesson_name}\n\thas URL {lesson_url}")
+	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f" Lecture {indice} of {lesson_index}: {lesson_name}\n\thas URL {lesson_url}")
 	current_url = driver.current_url
 	if(lesson_url != current_url): #Next ones
 		driver.get(lesson_url)
