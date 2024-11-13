@@ -168,17 +168,20 @@ def duration_probe(file_path):
 	except Exception as e:
 		print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Could not retrieve the duration: {e}")
 		return None
-def is_duration_correct(existing_duration: str, expected_duration: str) -> bool:
-	exidur = int(existing_duration)
-	expdur = int(expected_duration)
-	if(len(str(expdur))<7):
-		rounded_exidur = exidur // 10
-		if exidur % 10 >= 5:
-			rounded_exidur += 1
-	else:
-		rounded_exidur = expdur+1
-	if exidur >= expdur or rounded_exidur >= expdur:
-		return True
+def is_duration_correct(existing_duration, expected_duration) -> bool:
+	if(existing_duration is not None and expected_duration is not None):
+		exidur = int(existing_duration)
+		expdur = int(expected_duration)
+		if(len(str(expdur))<7):
+			rounded_exidur = exidur // 10
+			if exidur % 10 >= 5:
+				rounded_exidur += 1
+		else:
+			rounded_exidur = expdur+1
+		if exidur >= expdur or rounded_exidur >= expdur:
+			return True
+		else:
+			return False
 	else:
 		return False
 def download_lecture_part(output_folder, lec_link, lec_title, expected_duration):
