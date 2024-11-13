@@ -486,6 +486,7 @@ while indice-1 <= lesson_index-1:
 		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 		time.sleep(6)
 		time.sleep(6)
+		os.makedirs(COURSE_PATH, exist_ok=True)
 		# Wait for thex  page to load completely (you can customize this condition)
 		WebDriverWait(driver, 10).until(
 		    EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Wait for the body element to be present
@@ -500,13 +501,13 @@ while indice-1 <= lesson_index-1:
 	else: #First one
 		time.sleep(6)
 		time.sleep(6)
+		os.makedirs(COURSE_PATH, exist_ok=True)
 		WebDriverWait(driver, 10).until(
 		    EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Wait for the body element to be present
 		)
 		soup = html.unescape(str(BeautifulSoup(driver.page_source, 'html.parser')))
 		lecture_id, course_id, lecture_url, caption_url, expected_duration = extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL)
 		# writing out for if we ever want to debug this mess, plus exercises
-		os.makedirs(COURSE_PATH, exist_ok=True)
 		with open(f'{COURSE_PATH}soup.html', 'w', encoding='utf-8') as out:
 			out.write(f"{soup}")
 			print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f'Experimental, Saved page soup as HTML. (Best alternative for building exercises later)')
