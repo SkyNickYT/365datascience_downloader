@@ -105,7 +105,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Lecture's ID: {lecture_id}")
 	else:
 		lecture_id = None
-		print(Fore.RED + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture.")
+		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture.")
 	# Check if we have a valid video ID to proceed
 	if course_id:
 		# Construct the URL to get the video information from Brightcove
@@ -134,7 +134,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 				lec = data[start_pt:end_pt].split("'")[1::2]
 				caption_url = lec[0]
 			else:
-				print(Fore.RED + "\n[WARNING] " + Fore.RESET + "Captions URL not found for this lecture.")
+				print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Captions URL not found for this lecture.")
 		else:
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Failed to get data: {response.status_code}")
 	else:
