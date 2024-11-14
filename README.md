@@ -71,7 +71,7 @@ OR
 python main.py -c https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/
 
 (Deleting Cookies)
-python main.py --course https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/ --rc
+python main.py --course https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/ -rc
 OR
 python main.py -c https://learn.365datascience.com/courses/data-literacy/what-exactly-is-data-literacy/ --remove-cookies
 ```
@@ -84,7 +84,7 @@ OR
 $ python3 main.py -c https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/
 
 (Deleting Cookies)
-$ python3 main.py --course https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/ --rc
+$ python3 main.py --course https://learn.365financialanalyst.com/courses/who-does-what-in-finance/course-introduction/ -rc
 OR
 $ python3 main.py -c https://learn.365datascience.com/courses/data-literacy/what-exactly-is-data-literacy/ --remove-cookies
 ```
