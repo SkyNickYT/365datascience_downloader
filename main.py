@@ -23,7 +23,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 # Initialize colorama
 init()
-#Load .env
+# Load .env
 load_dotenv()
 # Regex for valid Windows filenames (for validation)
 windows_filename_regex = r'^(?!^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.[^\\/:*?"<>|\r\n]*)?$)(?!.*[\\/:*?"<>|\|]).{1,255}$'
@@ -43,11 +43,10 @@ def download_vtt(vtt_url, save_path):
 		try:
 			# Execute the FFmpeg command
 			subprocess.run(ffmpeg_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f" VTT downloaded,\n\tand saved to {save_path}")
+			print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f"VTT downloaded,\n\tand saved to {save_path}")
 		except subprocess.CalledProcessError as e:
 			# Handle errors during FFmpeg execution
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error occurred during FFmpeg execution: {e}")
-
 		except Exception as e:
 			# Handle other general exceptions
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"An unexpected error occurred: {e}")
@@ -95,8 +94,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Course's ID: {course_id}")
 	else:
 		course_id = None
-		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Video ID not found, unsupported lecture.")
-
+		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Video ID not found, unsupported lecture type.")
 	# Extracting the lecture ID
 	lecid_pattern = r"\/([a-f0-9\-]{36})\/main\/"
 	lecture_id = re.search(lecid_pattern, str(soup))
@@ -105,7 +103,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Lecture's ID: {lecture_id}")
 	else:
 		lecture_id = None
-		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture.")
+		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture type.")
 	# Check if we have a valid video ID to proceed
 	if course_id:
 		# Construct the URL to get the video information from Brightcove
@@ -138,7 +136,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		else:
 			print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Failed to get data: {response.status_code}")
 	else:
-		print(Fore.RED + "\n[WARNING] " + Fore.RESET + f"Video ID is required to fetch a URL, not found on an unsupported lecture.")
+		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + f"Video ID is required to fetch a URL, not found on an unsupported lecture type.")
 	# Return both IDs and the lecture URL (if found)
 	return lecture_id, course_id, lecture_url if 'lecture_url' in locals() else None, caption_url if 'caption_url' in locals() else None, requested_duration if 'requested_duration' in locals() else None
 def duration_probe(file_path):
@@ -164,7 +162,6 @@ def duration_probe(file_path):
 		duration = int(duration)+1
 		duration = str(duration)
 		return duration
-
 	except Exception as e:
 		print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Could not retrieve the duration: {e}")
 		return None
@@ -196,12 +193,12 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 				except FileNotFoundError:
 					pass
 			else:
-				print(Fore.YELLOW + "\n[FFMPEG] " + Fore.RESET + " Trying to Download Captions\n\t...")
+				print(Fore.CYAN+ "\n[FFMPEG] " + Fore.RESET + " Trying to Download Captions\n\t...")
 				download_vtt(lec_link, output_path_vtt)
 				time.sleep(3)
 				convert_vtt_to_srt(output_path_vtt, output_path_srt)
 	else:
-		print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + "Captions will not be downloaded for this lecture, unavailable.")
+		print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + "Captions will not be downloaded for this lecture, unavailable.")
 	if lec_link != None:
 		if "hls" in lec_link:
 			output_path = os.path.join(output_folder, f"{lec_title}.mp4")
@@ -219,11 +216,11 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 			if os.path.exists(output_path):
 				existing_duration = duration_probe(output_path)
 				if(is_duration_correct(existing_duration, expected_duration)):
-					print(Fore.YELLOW + "\n[MOVING ON] " + Fore.RESET + f"Output file {output_path}\n\tjust downloaded or already exists, with correct duration.\n\t...")
+					print(Fore.MAGENTA + "\n[SKIPPING] " + Fore.RESET + f"Output file {output_path}\n\tjust downloaded or already exists, with correct duration.\n\t...")
 				else:
 					# Execute the FFmpeg command and wait for it to finish - fixing duration
 					try:
-						print(Fore.YELLOW + "\n[FFMPEG] " + Fore.RESET + f" Downloading Video for this lecture, alongside fixing duration to a correct one.\n\t...")
+						print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + f" Downloading Video for this lecture, alongside fixing duration to a correct one.\n\t...")
 						process = subprocess.Popen(ffmpeg_command,
 												   stdout=subprocess.PIPE,
 												   stderr=subprocess.STDOUT,
@@ -239,7 +236,7 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 			else:
 				# Execute the FFmpeg command and wait for it to finish
 				try:
-					print(Fore.YELLOW + "\n[FFMPEG] " + Fore.RESET + " Downloading Video for this lecture\n\t...")
+					print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + " Downloading Video for this lecture\n\t...")
 					process = subprocess.Popen(ffmpeg_command,
 											   stdout=subprocess.PIPE,
 											   stderr=subprocess.STDOUT,
@@ -267,16 +264,22 @@ def check_course_url(course_url):
 			course_url += '/'
 		# Check if the URL contains the necessary sections
 		if '/courses/' in course_url and course_url.count('/') == 6:
-			return (base_url_1 if course_url.startswith(base_url_1) else base_url_2,
-                    api_base_1 if course_url.startswith(base_url_1) else api_base_2)
+			if '/preview/' in course_url:
+				raise ValueError(
+					f"{Fore.RED} \n[ERROR] {Fore.RESET} Provided URL must NOT be a 'preview' link. But an actual lecture's link instead."
+					f"{Fore.RED} \n[ERROR] {Fore.RESET} Ensure you're providing the link to the first lecture that contains a video.\n\t Are you missing that?"
+					)
+			else:
+				return (base_url_1 if course_url.startswith(base_url_1) else base_url_2,
+	                    api_base_1 if course_url.startswith(base_url_1) else api_base_2)
 		else:
 			raise ValueError(
-				f"{Fore.RED} \n[ERROR] {Fore.RESET} Provided URL must contain '/courses/' and end with course's first lecture.\n\t Are you missing that?"
-				f"{Fore.RED} \n[ERROR] {Fore.RESET} Ensure you're providing the link to the first lecture."
+				f"{Fore.RED} \n[ERROR] {Fore.RESET} Provided URL must contain '/courses/' and end with course's first lecture that contains a video."
+				f"{Fore.RED} \n[ERROR] {Fore.RESET} Ensure you're providing the link to the first lecture that contains a video.\n\t Are you missing that?"
 			)
 	else:
 		raise ValueError("{Fore.RED} \n[ERROR] {Fore.RESET} Provided URL is not part of this tool's capability, only provide 365datascience and 365financialanalyst URLs.")
-#MAIN
+# MAIN
 def main():
 	global COURSE_URL
 	global COURSE_SLUG
@@ -448,10 +451,16 @@ time.sleep(5)
 soup = html.unescape((BeautifulSoup(driver.page_source, 'html.parser')))
 # getting accountId
 acc_pattern = r"\/(\d{13})\/[a-f0-9\-]{36}\/main\/"
-account_id = re.search(acc_pattern, str(soup)).group(1)
-print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f'Your Account\'s ID: {account_id}')
-lesson_pattern = r'lesson">\s*(.*?)\s*<\/span>'
+account_id_match = re.search(acc_pattern, str(soup))
+if(account_id_match is not None):
+	account_id = re.search(acc_pattern, str(soup)).group(1)
+	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f'Your Account\'s ID: {account_id}')
+else:
+	print(Fore.RED + "\n[ERROR] " + Fore.RESET + 'Your Account\'s ID cannot be found using this lecture\'s link, does this lecture page contain a video? \n\tIf not, please try another lecture\'s link that does.')
+	driver.close()
+	exit()
 # Find all lessons
+lesson_pattern = r'lesson">\s*(.*?)\s*<\/span>'
 lessons = re.findall(lesson_pattern, str(soup))
 total_lec_element = driver.find_element(By.XPATH, """//*[@id="__layout"]/div/header/nav/ul/li[1]/div[1]/div/div/div""").text
 total_lec_pattern = r'/(?P<number>\d+)'
@@ -487,13 +496,16 @@ while indice-1 <= lesson_index-1:
 		time.sleep(6)
 		time.sleep(6)
 		os.makedirs(COURSE_PATH, exist_ok=True)
-		# Wait for thex  page to load completely (you can customize this condition)
 		WebDriverWait(driver, 10).until(
 		    EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Wait for the body element to be present
 		)
 		# wet, hot and ready... (second timer)
 		soup = html.unescape(str(BeautifulSoup(driver.page_source, 'lxml')))
 		lecture_id, course_id, lecture_url, caption_url, expected_duration = extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL)
+		if not os.path.exists(f'{COURSE_PATH}soup.html'):
+			with open(f'{COURSE_PATH}soup.html', 'w', encoding='utf-8') as out:
+				out.write(f"{soup}")
+				print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + f'Experimental, Saved page soup as HTML. (Best alternative for building exercises later)')
 		lesson_name = sanitize(lesson_name)
 		lesson_name = str(indice)+" - "+lesson_name
 		download_lecture_part(COURSE_PATH, lecture_url, lesson_name, expected_duration)
@@ -510,7 +522,7 @@ while indice-1 <= lesson_index-1:
 		# writing out for if we ever want to debug this mess, plus exercises
 		with open(f'{COURSE_PATH}soup.html', 'w', encoding='utf-8') as out:
 			out.write(f"{soup}")
-			print(Fore.MAGENTA + "\n[INFO] " + Fore.RESET + f'Experimental, Saved page soup as HTML. (Best alternative for building exercises later)')
+			print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + f'Experimental, Saved page soup as HTML. (Best alternative for building exercises later)')
 		lesson_name = sanitize(lesson_name)
 		lesson_name = str(indice)+" - "+lesson_name
 		download_lecture_part(COURSE_PATH, lecture_url, lesson_name, expected_duration)
