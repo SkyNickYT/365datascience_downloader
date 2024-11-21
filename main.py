@@ -9,11 +9,12 @@ import argparse
 import html5lib
 import requests
 import subprocess
+from sys import stdout
 from threading import Timer
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from colorama import init, Fore
 from dotenv import load_dotenv
+from colorama import init, Fore
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -94,7 +95,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Course's ID: {course_id}")
 	else:
 		course_id = None
-		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Video ID not found, unsupported lecture type.")
+		print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + "Video ID not found, unsupported lecture type.")
 	# Extracting the lecture ID
 	lecid_pattern = r"\/([a-f0-9\-]{36})\/main\/"
 	lecture_id = re.search(lecid_pattern, str(soup))
@@ -103,7 +104,7 @@ def extract_ids_and_lecture_url(soup, account_id, headers, COURSE_URL):
 		print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f"This Lecture's ID: {lecture_id}")
 	else:
 		lecture_id = None
-		print(Fore.YELLOW + "\n[WARNING] " + Fore.RESET + "Lecture ID not found, unsupported lecture type.")
+		print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + "Lecture ID not found, unsupported lecture type.")
 	# Check if we have a valid video ID to proceed
 	if course_id:
 		# Construct the URL to get the video information from Brightcove
@@ -181,11 +182,26 @@ def is_duration_correct(existing_duration, expected_duration) -> bool:
 			return False
 	else:
 		return False
+def loading_bar(elapsed_time_seconds, total_duration_seconds, download_speed_mibps, total_downloaded_mib):
+	progress = elapsed_time_seconds / total_duration_seconds  # Calculate progress
+	bar_length = 40  # Length of the loading bar
+	bar_filled_length = int(bar_length * progress)  # How many characters to fill
+	bar = '█' * bar_filled_length + '░' * (bar_length-1 - bar_filled_length)  # The loading bar
+	# Calculate raw percentage
+	raw_percentage = progress * 100
+	adjusted_percentage = round(raw_percentage)  # Round the percentage
+	print("\n")
+	stdout.write("\r\033[K\033[A\r\033[K\033[A\r\033[K\033[A\033[A\r\033[K")
+	stdout.write(f"\r{Fore.CYAN}[FFMPEG]{Fore.RESET}  Processing Video:  [ {Fore.GREEN}{adjusted_percentage}%{Fore.RESET} / 100% ] |{Fore.MAGENTA}{bar}{Fore.RESET}| "
+				f"[ {Fore.YELLOW}{round(elapsed_time_seconds)}s{Fore.RESET} / {round(total_duration_seconds)}s ]"
+				f"\n\t  Speed: {Fore.CYAN}{download_speed_mibps:.3f} MiB/s{Fore.RESET} "
+				f"| Downloaded: {Fore.YELLOW}{total_downloaded_mib:.2f} MiB{Fore.RESET}\n")
+	stdout.flush()  # Ensure the output is printed immediately
 def download_lecture_part(output_folder, lec_link, lec_title, expected_duration):
 	if lec_link != None:
 		if "vtt" in lec_link:
-			output_path_vtt = os.path.join(output_folder, f"{lec_title}.vtt")
-			output_path_srt = os.path.join(output_folder, f"{lec_title}.srt")
+			output_path_vtt = os.path.join(output_folder, f"{lec_title.replace('&amp;', '&')}.vtt")
+			output_path_srt = os.path.join(output_folder, f"{lec_title.replace('&amp;', '&')}.srt")
 			if(os.path.exists(output_path_srt)):
 				print(Fore.MAGENTA + "\n[SKIPPING] " + Fore.RESET + "Skipping Captions Download, they already exist for this lecture.")
 				try:
@@ -193,15 +209,15 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 				except FileNotFoundError:
 					pass
 			else:
-				print(Fore.CYAN+ "\n[FFMPEG] " + Fore.RESET + " Trying to Download Captions\n\t...")
+				print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + " Trying to Download Captions.")
 				download_vtt(lec_link, output_path_vtt)
-				time.sleep(3)
+				time.sleep(0.8)
 				convert_vtt_to_srt(output_path_vtt, output_path_srt)
 	else:
 		print(Fore.YELLOW + "\n[INFO] " + Fore.RESET + "Captions will not be downloaded for this lecture, unavailable.")
 	if lec_link != None:
 		if "hls" in lec_link:
-			output_path = os.path.join(output_folder, f"{lec_title}.mp4")
+			output_path = os.path.join(output_folder, f"{lec_title.replace('&amp;', '&')}.mp4")
 			# Construct the FFmpeg command as a list of arguments
 			ffmpeg_command = [
 				'ffmpeg',
@@ -216,39 +232,91 @@ def download_lecture_part(output_folder, lec_link, lec_title, expected_duration)
 			if os.path.exists(output_path):
 				existing_duration = duration_probe(output_path)
 				if(is_duration_correct(existing_duration, expected_duration)):
-					print(Fore.MAGENTA + "\n[SKIPPING] " + Fore.RESET + f"Output file {output_path}\n\tjust downloaded or already exists, with correct duration.\n\t...")
+					print(Fore.MAGENTA + "\n[SKIPPING] " + Fore.RESET + f"Output file {output_path}\n\tjust downloaded or already exists, with correct duration.")
 				else:
+					# Initialize variables
+					download_speed_mibps = 0
+					total_downloaded_mib = 0  # Initialize total downloaded size
+					total_duration_seconds = int(expected_duration) / 1000
 					# Execute the FFmpeg command and wait for it to finish - fixing duration
 					try:
-						print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + f" Downloading Video for this lecture, alongside fixing duration to a correct one.\n\t...")
+						print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + f" Downloading Video for this lecture, alongside fixing duration to a correct one.\n\n\n")
 						process = subprocess.Popen(ffmpeg_command,
 												   stdout=subprocess.PIPE,
 												   stderr=subprocess.STDOUT,
 												   universal_newlines=True)
 						for line in iter(process.stdout.readline, b''):
 							if line.rstrip() != "":
-								print(">>>" + Fore.MAGENTA + line.rstrip().replace("size=", "") + Fore.RESET)
+								line = ">>>" + line.rstrip().replace("size=", "")
+								# Search for time= in the output
+								time_match = re.search(r'time=([0-9]{2}):([0-9]{2}):([0-9]*\.[0-9]*)', line)
+								if time_match:
+									# Extract elapsed time in seconds
+									hours, minutes, seconds = map(float, time_match.groups())
+									elapsed_time_seconds = hours * 3600 + minutes * 60 + seconds  # Convert to seconds
+									# Update loading bar with elapsed time
+									loading_bar(elapsed_time_seconds, total_duration_seconds, download_speed_mibps, total_downloaded_mib)
+								# Search for downloaded size
+								downloaded_size_match = re.search(r"^\s*>>>\s*(\d+)kB", line)
+								if downloaded_size_match:
+									# Extract and convert downloaded size
+									downloaded_size_kb = int(downloaded_size_match.group(1))  # in kB
+									total_downloaded_mib = downloaded_size_kb / 1024  # Convert kB to MiB
+									# Update the loading bar with the new total downloaded MiB
+									loading_bar(elapsed_time_seconds, total_duration_seconds, download_speed_mibps, total_downloaded_mib)
+							    # Search for bitrate= in the output
+								bitrate_match = re.search(r'bitrate=([0-9\.]+)kbits/s', line)
+								if bitrate_match:
+									# Extract bitrate
+									bitrate_kbps = float(bitrate_match.group(1))  # in kbps
+									download_speed_mibps = bitrate_kbps / 1024  # Convert kbps to MiB/s
 							else:
 								break
 						print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f"Lecture Download completed successfully!" + Fore.MAGENTA + "\n\n[INFO] " + Fore.RESET +  f"Saved to {output_path} after fixing duration from {existing_duration} to {expected_duration}")
 					except subprocess.CalledProcessError as e:
-						print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during conversion, corrupted file maybe: {e}")
+						print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during download: {e}")
 			else:
 				# Execute the FFmpeg command and wait for it to finish
 				try:
-					print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + " Downloading Video for this lecture\n\t...")
+					print(Fore.CYAN + "\n[FFMPEG] " + Fore.RESET + " Downloading Video for this lecture.\n\n\n")
+					# Initialize variables
+					download_speed_mibps = 0
+					total_downloaded_mib = 0  # Initialize total downloaded size
+					total_duration_seconds = int(expected_duration) / 1000
 					process = subprocess.Popen(ffmpeg_command,
 											   stdout=subprocess.PIPE,
 											   stderr=subprocess.STDOUT,
 											   universal_newlines=True)
 					for line in iter(process.stdout.readline, b''):
 						if line.rstrip() != "":
-							print(">>>" + Fore.MAGENTA + line.rstrip().replace("size=", "") + Fore.RESET)
+							line = ">>>" + line.rstrip().replace("size=", "")
+							# Search for time= in the output
+							time_match = re.search(r'time=([0-9]{2}):([0-9]{2}):([0-9]*\.[0-9]*)', line)
+							if time_match:
+								# Extract elapsed time in seconds
+								hours, minutes, seconds = map(float, time_match.groups())
+								elapsed_time_seconds = hours * 3600 + minutes * 60 + seconds  # Convert to seconds
+								# Update loading bar with elapsed time
+								loading_bar(elapsed_time_seconds, total_duration_seconds, download_speed_mibps, total_downloaded_mib)
+							# Search for downloaded size
+							downloaded_size_match = re.search(r"^\s*>>>\s*(\d+)kB", line)
+							if downloaded_size_match:
+								# Extract and convert downloaded size
+								downloaded_size_kb = int(downloaded_size_match.group(1))  # in kB
+								total_downloaded_mib = downloaded_size_kb / 1024  # Convert kB to MiB
+								# Update the loading bar with the new total downloaded MiB
+								loading_bar(elapsed_time_seconds, total_duration_seconds, download_speed_mibps, total_downloaded_mib)
+						    # Search for bitrate= in the output
+							bitrate_match = re.search(r'bitrate=([0-9\.]+)kbits/s', line)
+							if bitrate_match:
+								# Extract bitrate
+								bitrate_kbps = float(bitrate_match.group(1))  # in kbps
+								download_speed_mibps = bitrate_kbps / 1024  # Convert kbps to MiB/s
 						else:
 							break
 					print(Fore.GREEN + "\n[SUCCESS] " + Fore.RESET + f"Lecture Download completed successfully!" + Fore.MAGENTA + "\n\n[INFO] " + Fore.RESET +  f"Saved to {output_path}")
 				except subprocess.CalledProcessError as e:
-					print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during conversion: {e}")
+					print(Fore.RED + "\n[ERROR] " + Fore.RESET + f"Error during download, corrupted file maybe!")
 # Function to validate the course URL
 def check_course_url(course_url):
 	base_url_1 = "https://learn.365datascience.com/"
@@ -345,7 +413,6 @@ options.add_argument("--log-level=3")
 options.add_argument("--auto-open-devtools-for-tabs")
 options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 options.add_argument(f'user-agent={DesiredCapabilities.CHROME}')
-# Set the custom download path in Chrome preferences
 options.add_experimental_option(
 	"prefs", {
 	"profile.managed_default_content_settings.images": 2,
@@ -423,6 +490,7 @@ course_title = driver.title
 end_pt = course_title.find(title_ignorer, 0)
 course_title = course_title[0:end_pt]
 course_title = sanitize(course_title)
+course_title = course_title.replace('&amp;', '&')
 COURSE_PATH = OUTPUT_FOLDER+course_title+"/"
 print(Fore.CYAN + "\n[INFO] " + Fore.RESET + "Course Page Title: ",driver.title)
 sections = driver.find_elements(By.CSS_SELECTOR, "span[class='section-name']")
@@ -488,7 +556,7 @@ while indice-1 <= lesson_index-1:
 		les_name = les_name.replace("'", '')
 		lesson_name_extrap = les_name.replace(" ", '-')
 		lesson_url = f"{base_url[:-1]}/courses/{COURSE_SLUG}/{lesson_name_extrap.lower()}/"
-	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f" Lecture {indice} of {lesson_index}: {lesson_name}\n\thas URL {lesson_url}")
+	print(Fore.CYAN + "\n[INFO] " + Fore.RESET + f" Lecture {indice} of {lesson_index}: {lesson_name.replace('&amp;', '&')}\n\thas URL {lesson_url}")
 	current_url = driver.current_url
 	if(lesson_url != current_url): #Next ones
 		driver.get(lesson_url)
