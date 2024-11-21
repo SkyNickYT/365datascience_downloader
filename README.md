@@ -1,6 +1,8 @@
-# Any Current Offers Show Here:
-#### Will remove when no offers, Current offer: Nov. 1, 2024 to Nov. 21, 2024
-<img src="https://i.imgur.com/IShuD9o.png" alt="Imgur Image" width="500"/>
+# Offers when available show up here:
+#### Previous offer lasted: [Nov. 1, 2024 to Nov. 21, 2024](https://i.imgur.com/IShuD9o.png)🖼️
+### Development has been halted till the next offer shows up,
+### If you own a subscription and have any problems open an issue.
+###### ~ last updated: Nov. 21, 2024 ✍️
 
 # 365 Data Science + Financial Analyst Downloader
 
@@ -19,7 +21,7 @@ The following are a list of required third-party tools, you will need to ensure 
 > You will need to download and install these manually!
 
 1. Install [ffmpeg](https://github.com/BtbN/FFmpeg-Builds/releases) Also add it to your OS `PATH`
-2. Install [Python 3.10+](https://www.xda-developers.com/how-to-install-python/) I prefer `Python 3.12`
+2. Install [Python 3.10+](https://www.xda-developers.com/how-to-install-python/) `Python 3.8` can work too, untested.
 3. Install [Selenium Chrome WebDriver](https://googlechromelabs.github.io/chrome-for-testing/) & Know the path, where it's downloaded.
 
 ## Setup
@@ -36,7 +38,7 @@ The following are a list of required third-party tools, you will need to ensure 
 
    -> Go to its Headers
 
-   -> Copy the `Accept` header's `;pk=whatever_value_here` <--- `whatever_value_here part` only
+   -> Copy the `policy-key-raw` header's value `=whatever_value_here` <--- `whatever_value_here part` only
 
    -> Paste the `whatever_value_here` part after `=` in `.env` in front of `POLICY_KEY=` text. Double-Quotes are *NOT* necessary.
 
@@ -90,7 +92,9 @@ $ python3 main.py -c https://learn.365datascience.com/courses/data-literacy/what
 ```
 
 > [!IMPORTANT] 
-> **PROVIDE** Link for the **first lecture** from the course, or you will get **errors**.
+> **PROVIDE** Link for the **first VIDEO lecture** from the course,
+>
+> if you get **errors** try this with some other lecture from the same course.
 
 **By Default**: Video quality is *1080p*, anything lower blurs screen text. Why would you even want that? Be Better!
 
@@ -98,6 +102,8 @@ $ python3 main.py -c https://learn.365datascience.com/courses/data-literacy/what
 
 > [!CAUTION]
 > **Missing Captions**: Some videos don't have captions attached, that's not my fault. This tool will let you know when it happens.
+>
+> **Loading Bar**: Loading bar is sensitive to the terminal's window width, don't push it too narrow (can lead to multiple-prints).
 
 <details>
 <summary><---Preview Download Folders' structure for "Introduction to Data and Data Science" and "Who Does What in Finance" courses:</summary>
